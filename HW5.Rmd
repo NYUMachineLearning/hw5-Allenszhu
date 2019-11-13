@@ -28,7 +28,6 @@ library(rpart)
 library(rpart.plot)
 ```
 
-
 ## Homework
 
 1. Attempt a regression tree-based method (not covered in this tutorial) on a reasonable dataset of your choice. Explain the results. 
@@ -142,4 +141,4 @@ abline(h = min(test.err), col = "red")
 ```
 The boosting summary showed that lstat and dis were the two most imformative variables in predicting the amount of rooms per dwelling. Looking online lstat stands for the lower status of the population, and medv stands for the median value of the houes. The two prediction maps also makes some intuitive sense. Houses have a higher value normally corresponds to more area - leading to more average rooms. The second prediction plot shows that as the lower status of the population increases, the number of average rooms decrease. This could be due to the fact that lower status of the population may tend to cluster around the city - an area where the average dwellings are apartments, and therefore have less rooms than the houses in the suburbs. 
 
-The model was already hinted at in the random forest diagram to be overfitted, and the boosting test error graph here confirms it. Normally there is a slight dip in this graph to showcase the optimal amount of trees required to make a prediction, however, in this instance the graph never displays this dip. This suggests that the model is overfitted, and may require a dimension reduction to lower the overall complexity. A look at the relative influence table suggests that rad, ptratio, and taxes would be good variables to drop when considering the number of rooms a house has. None of those variables break a relative influence value of 2.
+A look at the boosting test error graph shows that the graph is a little scattered. Before 1000 trees the points are kind of scattered, with the minimum MSE point landing at around 200 trees. The first visible dip in the line however, occurs at around 2100 trees. In order to optimize this model, it would be therefore recommended to run somewhere between those two points. The second lowest point on the plot occurs at around 1000 trees, and thus might be a good starting place to determine just how many trees need to be run to optimize the model.
