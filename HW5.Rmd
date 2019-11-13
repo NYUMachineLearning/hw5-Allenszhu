@@ -1,10 +1,12 @@
 ---
 title: 'Machine Learning 2019: Tree-Based Methods'
-author: "Sonali Narang"
+author: "Allen Zhu"
 date: "10/28/2019"
 output:
-  pdf_document: default
+  html_document:
+    df_print: paged
   pdf: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -22,124 +24,69 @@ library(tree)
 library(randomForest)
 library(MASS)
 library(gbm)
-
-```
-## The Carseats Dataset 
-
-400 Observations, 11 variables
-Response Variable: Sales/High 
-
-```{r The Carseats Dataset}
-data("Carseats")
-carseats = Carseats
-head(carseats)
-
-#convert quantitative variable Sales into a binary response 
-High = ifelse(carseats$Sales<=8, "No", "Yes")
-carseats = data.frame(carseats, High)
-
-head(carseats)
+library(rpart)
+library(rpart.plot)
 ```
 
-## Classification Tree
 
-Input variables (X) can be continuous or categorical.
-Response variable (Y) is categorical (usually binary): in this case Sales/High.
+## Homework
 
-```{r Classification Tree}
-#set seed to make results reproducible 
-set.seed(29)
+1. Attempt a regression tree-based method (not covered in this tutorial) on a reasonable dataset of your choice. Explain the results. 
 
-#split data into train and test subset (250 and 150 respectively)
-train = sample(1:nrow(carseats), 250)
-
-#Fit train subset of data to model 
-tree.carseats = tree(High~.-Sales, carseats, subset=train)
-summary(tree.carseats)
-
-#Visualize tree
-plot(tree.carseats)
-text(tree.carseats, pretty=0)
-
-#each of the terminal nodes are labeled Yes or No. The variables and the value of the splitting choice are shown at each terminal node. 
-
-#Use model on test set, predict class labels 
-tree.pred = predict(tree.carseats, carseats[-train,], type="class")
-
-#Misclassification table to evaluate error 
-with(carseats[-train,], table(tree.pred, High))
-
-#Calculate error by summing up the diagonals and dividing by number of total predictions
-mc = (71 + 42) / 150
-mc
+```{r}
+library(mlbench)
+data(BostonHousing)
+head(BostonHousing)
+BH = BostonHousing
 ```
 
-## Pruning using cross-validation
-Pruning is a method to cut back the tree to prevent over-fitting. 
+CP stands for the complexity parameter and represents the benefit of adding another layer to the tree. In the table generated below, it can be observed that by the addition of the first layer increases the predictive capability of the model by 45%, and a second layer further raises its predictive probability by an additional 17%. The default cut off in R for the cp value is 0.01, and that represents the level where additional levels provide minimal benefits to improving the model.
 
-```{r Pruning}
-#cross-validation to prune the tree using cv.tree
-cv.carseats = cv.tree(tree.carseats, FUN = prune.misclass)
+X-error represents is another metric that can be used to measure the benefits of adding layers to the tree. X-error is the cross validation error rate, where additional layers lower the error rate. As can be observed below, additional samples decreases the error rate farily significantly until it reaches the 5th layer, where a 0.0002 decrease is observed. At that point, the rate decrease is fairly small, and additional layers will run the risk of overfitting. 
 
-#Sizes of the trees as they were pruned back, the deviances as the pruning proceeded, and cost complexity parameter used in the process.
-cv.carseats
+```{r}
 
-#Visualize 
-plot(cv.carseats)
+fit <- rpart(medv~.,method="anova", data=BH)
 
-#Prune tree to a size of 12 
-prune.carseats = prune.misclass(tree.carseats, best = 12)
 
-#Visualize tree 
-plot(prune.carseats)
-text(prune.carseats, pretty=0)
+printcp(fit) # display the results
+plotcp(fit) # visualize cross-validation results
 
-#Evaluate on test set 
-tree.pred = predict(prune.carseats, carseats[-train,], type="class")
 
-#Misclassification 
-with(carseats[-train,], table(tree.pred, High))
 
-#Error 
-mc_pruning = (66 + 41) / 150
-mc_pruning
-
-##pruning did not increase misclassification error by too much and resulted in a simpler tree!!
 ```
-Pruning did not increase misclassification error by too much and resulted in a simpler tree!!
+The below shows two plots. The first one plots the cross validation results against the actual results, whereas the second graph plots the cross validation results as a response to adding splits to the tree. 
 
-Decision trees suffer from high variance, meaning if you split the training data into 2 parts at random, and fit a decision tree to both halves, the results that you get could be very different.
+```{r}
+par(mfrow=c(1,2)) # two plots on one page
+rsq.rpart(fit) # visualize cross-validation results   
 
-Bagging and boosting are technique used to reduce the variance of your predictions.
-
-## The Boston Housing Dataset 
-
-506 Observations, 14 variables
-Response Variable: medv (median value of owner-occupied homes for each suburb)
-
-```{r The Boston Housing Dataset}
-data("Boston")
-boston = Boston
-head(Boston)
 ```
 
-## Bagging: Random Forest 
+Here I plotted the regression tree twice, once using the generic plot function, and another with the rpart plot function. The tree itself corresponds correctly with the cp and cross validation. Looking at the plotcp graph, it looks like the cut off is at around 7 splits, and that's how many splits are present in the tree below.
 
-Bagging involves creating multiple copies of the original training dataset using the bootstrap, fitting a separate decision tree to each copy, and then combining all of the trees in order to create a single predictive model. Each tree is built on a bootstrapped dataset, independent of the other trees.
+```{r}
+plot(fit, uniform=TRUE,
+   main="Regression Boston Housing Diagnosis ")
+text(fit, use.n=TRUE, all=TRUE, cex=.8)
 
-Random Forest: Each time a split in a tree is considered, a random sample of m predictors is chosen as split candidates from the full set of p predictors. The split is allowed to use only one of those m predictors.
+rpart.plot(fit)
+
+```
 
 
-```{r Random Forest}
+2. Attempt both a bagging and boosting method on a reasonable dataset of your choice. Explain the results.
+
+```{r Random Forest HW}
 #set seed for reproducibility 
-set.seed(29)
+set.seed(30)
 
 #split into train and test sets (300 and 206 respectively)
-train = sample(1:nrow(boston), 300)
+train = sample(1:nrow(BH), 300)
 
 #fit training subset of data to model 
-rf.boston = randomForest(medv~., data = boston, subset = train)
-rf.boston
+rf.bh = randomForest(medv~., data = BH, subset = train)
+rf.bh
 
 #summary of rf.boston gives information about the number of trees, the mean squared residuals (MSR), and the percentage of variance explained
 
@@ -153,10 +100,10 @@ test.err = double(13)
 
 #In a loop of mtry from 1 to 13, you first fit the randomForest to the train dataset
 for(mtry in 1:13){
-  fit = randomForest(medv~., data = boston, subset=train, mtry=mtry, ntree = 350)
+  fit = randomForest(medv~., data = BH, subset=train, mtry=mtry, ntree = 350)
   oob.err[mtry] = fit$mse[350] ##extract Mean-squared-error 
-  pred = predict(fit, boston[-train,]) #predict on test dataset
-  test.err[mtry] = with(boston[-train,], mean( (medv-pred)^2 )) #compute test error
+  pred = predict(fit, BH[-train,]) #predict on test dataset
+  test.err[mtry] = with(BH[-train,], mean( (medv-pred)^2 )) #compute test error
 }
 
 #Visualize 
@@ -164,39 +111,35 @@ matplot(1:mtry, cbind(test.err, oob.err), pch = 23, col = c("red", "blue"), type
 legend("topright", legend = c("OOB", "Test"), pch = 23, col = c("red", "blue"))
 ```
 
-## Boosting 
 
-Boosting is another approach to improve the predictions resulting from a decision tree. Trees are grown sequentially: each tree is grown using information from previously grown trees. Each tree is fitted on a modified version of the original dataset.
+At a glance, it looks like the model does quite well with the OOB samples where the MSE values hovering at around 5-10. The tree performs worse for the test data were the MSE values now hoever at around 15. This suggests that the model might be overfitted to the training data, where it may perform admirably on the training set, it becomes less capable of making accurate predictions on the testing data. 
 
 
-```{r Boosting}
+
+```{r Boosting HW}
+
 #Gradient Boosting Model
-boost.boston = gbm(medv~., data = boston[train,], distribution = "gaussian", n.trees = 10000, shrinkage = 0.01, interaction.depth = 4)
+boost.BH = gbm(rm~., data = BH[train,], distribution = "gaussian", n.trees = 10000, shrinkage = 0.01, interaction.depth = 4)
 
 #Variable Importance Plot
-summary(boost.boston)
+summary(boost.BH)
+
 
 #Visualize important variables of interest
-plot(boost.boston,i="lstat")
-plot(boost.boston,i="rm")
+plot(boost.BH,i="dis")
+plot(boost.BH,i="lstat")
 
 #Predict on test set
 n.trees = seq(from = 100, to = 10000, by = 100)
-predmat = predict(boost.boston, newdata = boston[-train,], n.trees = n.trees)
+predmat = predict(boost.BH, newdata = BH[-train,], n.trees = n.trees)
 dim(predmat)
 
 #Visualize Boosting Error Plot
-boost.err = with(boston[-train,], apply( (predmat - medv)^2, 2, mean) )
+boost.err = with(BH[-train,], apply( (predmat - rm)^2, 2, mean) )
 plot(n.trees, boost.err, pch = 23, ylab = "Mean Squared Error", xlab = "# Trees", main = "Boosting Test Error")
 abline(h = min(test.err), col = "red")
 
 ```
+The boosting summary showed that lstat and dis were the two most imformative variables in predicting the amount of rooms per dwelling. Looking online lstat stands for the lower status of the population, and medv stands for the median value of the houes. The two prediction maps also makes some intuitive sense. Houses have a higher value normally corresponds to more area - leading to more average rooms. The second prediction plot shows that as the lower status of the population increases, the number of average rooms decrease. This could be due to the fact that lower status of the population may tend to cluster around the city - an area where the average dwellings are apartments, and therefore have less rooms than the houses in the suburbs. 
 
-## Homework
-
-1. Attempt a regression tree-based method (not covered in this tutorial) on a reasonable dataset of your choice. Explain the results. 
-
-2. Attempt both a bagging and boosting method on a reasonable dataset of your choice. Explain the results.
-
-
-
+The model was already hinted at in the random forest diagram to be overfitted, and the boosting test error graph here confirms it. Normally there is a slight dip in this graph to showcase the optimal amount of trees required to make a prediction, however, in this instance the graph never displays this dip. This suggests that the model is overfitted, and may require a dimension reduction to lower the overall complexity. A look at the relative influence table suggests that rad, ptratio, and taxes would be good variables to drop when considering the number of rooms a house has. None of those variables break a relative influence value of 2.
